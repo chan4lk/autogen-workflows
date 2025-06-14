@@ -1,4 +1,6 @@
 from autogen import ConversableAgent, LLMConfig
+from autogen.agentchat import initiate_group_chat
+from autogen.agentchat.group.patterns import AutoPattern
 import os
 import random
 
@@ -26,11 +28,21 @@ def run_design_document_agent():
     
     """
 
+    # Define the system message for our critic agent
+    critic_system_message = """
+    you are a critic. You will review the design document and provide feedback.
+    """
+
     # Create the architect agent with LLM intelligence
     with llm_config:
         architect = ConversableAgent(
             name="architect",
             system_message=architect_system_message,
+        )
+
+        critic = ConversableAgent(
+            name="critic",
+            system_message=critic_system_message
         )
 
     # Create the human agent for oversight
@@ -46,10 +58,14 @@ def run_design_document_agent():
     )
 
     # Start the conversation from the human agent
-    response = human.run(
-        recipient=architect,
-        message=initial_prompt,
-    )
+    pattern = AutoPattern(
+    initial_agent=architect,
+    agents=[architect, critic],
+    user_agent=human,
+    group_manager_args = {"llm_config": llm_config},
+)
 
-    # Display the response
-    response.process()
+    result, _, _ = initiate_group_chat(
+        pattern=pattern,
+        messages=initial_prompt,
+    )
